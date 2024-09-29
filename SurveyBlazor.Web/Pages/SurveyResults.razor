@@ -1,0 +1,36 @@
+@page "/survey-results"
+@inject HttpClient Http    // Injects HttpClient to make HTTP requests
+
+<h3>Survey Results</h3>
+
+@if (surveyResults == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!surveyResults.Any())
+{
+    <p>No survey results available.</p>
+}
+else
+{
+    <ul>
+        @foreach (var result in surveyResults)
+        {
+            <li>
+                @result.SurveyData
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    // List to hold survey results
+    private List<SurveyResult>? surveyResults;
+
+    // Called when the component is initialized
+    protected override async Task OnInitializedAsync()
+    {
+        // Retrieve survey results from the API
+        surveyResults = await Http.GetFromJsonAsync<List<SurveyResult>>("http://localhost:5045/api/Survey");
+    }
+}

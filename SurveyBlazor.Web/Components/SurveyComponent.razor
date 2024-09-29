@@ -1,0 +1,63 @@
+@inject IJSRuntime JSRuntime  // Injects the JavaScript Runtime for JS interop
+@inject HttpClient Http    // Injects HttpClient to send HTTP requests
+
+<!-- Container for rendering the SurveyJS form -->
+<div id="surveyContainer"></div>
+
+@code {
+    // Holds a reference to the .NET object for JS interop callbacks
+    private DotNetObjectReference<SurveyComponent>? objRef;
+
+    // Called after the component has been rendered
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Create a reference to this component instance for JS interop
+            objRef = DotNetObjectReference.Create(this);
+
+            try
+            {
+                // Call the JavaScript function to initialize the survey, passing the .NET reference
+                Console.WriteLine("Initializing survey...");
+                await JSRuntime.InvokeVoidAsync("initSurvey", objRef);
+                Console.WriteLine("Survey initialized.");
+            }
+            catch (JSException jsEx)
+            {
+                Console.WriteLine($"JSInterop Error: {jsEx.Message}");
+            }
+        }
+    }
+
+    // Method callable from JavaScript to process survey results
+    [JSInvokable]
+    public async Task ProcessSurveyResults(string json)
+    {
+        // Create a SurveyResult object with the received JSON data
+        var surveyResult = new SurveyResult
+        {
+            SurveyData = json
+        };
+
+        // Send a POST request to the API endpoint to save survey data
+        var response = await Http.PostAsJsonAsync("http://localhost:5045/api/Survey", surveyResult);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Optionally, handle successful response
+            Console.WriteLine("Survey data saved successfully.");
+        }
+        else
+        {
+            // Optionally, handle error response
+            Console.WriteLine("Failed to save survey data.");
+        }
+    }
+
+    // Dispose of the .NET object reference when the component is disposed
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}
