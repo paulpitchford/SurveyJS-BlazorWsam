@@ -1,3 +1,4 @@
+@using System.Text.Json
 @inject IJSRuntime JSRuntime  // Injects the JavaScript Runtime for JS interop
 @inject HttpClient Http    // Injects HttpClient to send HTTP requests
 
@@ -32,12 +33,20 @@
 
     // Method callable from JavaScript to process survey results
     [JSInvokable]
-    public async Task ProcessSurveyResults(string json)
+    public async Task ProcessSurveyResults(object results)
     {
+        // Convert the received object to a JSON element
+        var jsonElement = (JsonElement)results;
+
+        // Extract surveyData and surveyStructure from the JSON element
+        var surveyData = jsonElement.GetProperty("surveyData").GetString();
+        var surveyStructure = jsonElement.GetProperty("surveyStructure").GetString();
+
         // Create a SurveyResult object with the received JSON data
         var surveyResult = new SurveyResult
         {
-            SurveyData = json
+            SurveyData = surveyData ?? string.Empty,
+            SurveyStructure = surveyStructure ?? string.Empty
         };
 
         // Send a POST request to the API endpoint to save survey data

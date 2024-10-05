@@ -1,5 +1,7 @@
 @page "/survey-results"
 @inject HttpClient Http    // Injects HttpClient to make HTTP requests
+@using System.Text.Json
+@using SurveyBlazor.Web.Models
 
 <h3>Survey Results</h3>
 
@@ -13,14 +15,45 @@ else if (!surveyResults.Any())
 }
 else
 {
-    <ul>
-        @foreach (var result in surveyResults)
+    @foreach (var result in surveyResults)
+    {
+        // Deserialize the survey data (answers) into a dictionary
+        var answers = JsonSerializer.Deserialize<Dictionary<string, object>>(result.SurveyData);
+
+        // Deserialize the survey structure (questions) into objects
+        var structure = JsonSerializer.Deserialize<SurveyStructure>(result.SurveyStructure);
+
+        int questionNumber = 1;
+
+        // Check if the structure and pages are not null
+        if (structure?.Pages != null)
         {
-            <li>
-                @result.SurveyData
-            </li>
+            foreach (var page in structure.Pages)
+            {
+                if (page.Elements != null)
+                {
+                    foreach (var element in page.Elements)
+                    {
+                        <div class="mb-3">
+                            <h4>Question @questionNumber:</h4>
+                            <p>@(element.Title ?? "No title")</p>
+                            <p>Type: @(element.Type ?? "Unknown")</p>
+                            
+                            @if (answers != null && answers.TryGetValue(element.Name, out var answer))
+                            {
+                                <p>Answer: @answer</p>
+                            }
+                            else
+                            {
+                                <p>Answer: No answer provided</p>
+                            }
+                        </div>
+                        questionNumber++;
+                    }
+                }
+            }
         }
-    </ul>
+    }
 }
 
 @code {
@@ -30,7 +63,25 @@ else
     // Called when the component is initialized
     protected override async Task OnInitializedAsync()
     {
-        // Retrieve survey results from the API
-        surveyResults = await Http.GetFromJsonAsync<List<SurveyResult>>("http://localhost:5045/api/Survey");
+        try
+        {
+            // Retrieve survey results from the API
+            surveyResults = await Http.GetFromJsonAsync<List<SurveyResult>>("http://localhost:5045/api/Survey");
+
+            Console.WriteLine($"Number of survey results retrieved: {surveyResults?.Count}");
+            if (surveyResults != null)
+            {
+                foreach (var result in surveyResults)
+                {
+                    Console.WriteLine($"Survey ID: {result.Id}");
+                    Console.WriteLine($"Survey Data: {result.SurveyData}");
+                    Console.WriteLine($"Survey Structure: {result.SurveyStructure}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching survey results: {ex.Message}");
+        }
     }
 }
